@@ -1,0 +1,5 @@
+{
+    "entryPoints": ["./piece.ts"],
+    "out": "docs",
+    "includeVersion": true
+}

@@ -1,87 +1,125 @@
 import * as Shogi from "./board.js";
+import * as Pieces from "./piece.js";
+/**
+ * @class ShogiUI
+ * @classdesc The ShogiUI class manages the user interface for a Shogi game, providing board display, piece movement, and highlighting of selectable positions.
+ *
+ * @constructor
+ * @param {HTMLTableElement} tableElement - The HTMLTableElement that represents the Shogi game board.
+ * @example
+ * const instance = new ShogiUI(tableElement);
+ */
 export class ShogiUI {
-    // ボードの変化を適用する。
-    applyBoardToTable(board) {
-        const tbody = this.tableElement.getElementsByTagName('tbody')[0];
-        // 行を取得
-        const rows = tbody.getElementsByTagName('tr');
-        for (let row = 0; row < board.length; row++) {
-            const cells = rows[row].getElementsByTagName('td');
-            for (let col = 0; col < board[row].length; col++) {
-                // 表示文字を取得
-                cells[col].textContent = board[row][col].toString();
-                // 奥側は逆向き
-                if (!board[row][col].isSente)
-                    cells[col].style.transform = "rotate(180deg)";
-                // 成っている場合は赤色
-                if (board[row][col].getDidPromotion())
-                    cells[col].style.color = "red";
+    // ボードの変化を適用する関数
+    /**
+     * @function applyBoardToTable
+     * @description Apply the board to the table.
+     *
+     * @returns {void}
+     */
+    applyBoardToTable() {
+        for (let row = 0; row < Pieces.boardSize; row++) {
+            for (let col = 0; col < Pieces.boardSize; col++) {
+                const piece = this.board.matrix[row][col];
+                const cell = this.boardElement[row][col];
+                cell.style.backgroundColor = piece.isSente === this.board.isSenteTurn ? "darkgreen" : "green";
+                cell.style.backgroundImage = piece.isSente !== undefined ? "url('../../pic/shogi.gif')" : "none";
+                cell.style.backgroundSize = "cover"; // 画像をセル全体に表示
+                cell.style.backgroundRepeat = "no-repeat"; // 画像のリピートを無効化
+                cell.textContent = piece.toString();
+                cell.style.transform = piece.isSente ? "rotate(0deg)" : "rotate(180deg)";
+                cell.style.color = piece.getDidPromotion() ? "red" : "black";
             }
         }
     }
-    // ボードの変更をdisplayへ適用する。
-    displayBoard() {
-        let pieces = this.board.getBoard();
-        this.applyBoardToTable(pieces);
-    }
-    // 駒を移動させる。成功したかどうかをbooleanで返す。
+    /**
+     * @function move
+     * @description Call the move method of the board class.
+     *
+     * @param {Pieces.Position} from - Source location.
+     * @param {Pieces.Position} to - Destination location
+     * @returns {boolean} - Returns whether the move was successful.
+    */
     move(from, to) {
         return this.board.move(from, to);
     }
-    testSet([row, col]) {
-        const tbody = this.tableElement.getElementsByTagName('tbody')[0];
-        const rows = tbody.getElementsByTagName('tr');
-        // 置くことが出来る位置を取得
-        let availablePositions = this.board.board[row][col].generateMovePositions([row, col]);
-        // 移動可能な位置を赤色で表示
+    // 移動可能位置を表示する
+    viewCanSet([row, col]) {
+        const piece = this.board.matrix[row][col];
+        const availablePositions = piece.generateMovePositions([row, col]);
+        this.selectedPosition = [row, col]; // 移動元位置を保持
         let skip = false;
+        const pieceMoveHandler = (targetRow, targetCol) => {
+            if (this.selectedPosition) {
+                const [fromRow, fromCol] = this.selectedPosition;
+                if (this.move([fromRow, fromCol], [targetRow, targetCol]))
+                    this.applyBoardToTable(); // 移動成功後にボードを更新
+                this.selectedPosition = null; // 選択位置をクリア
+            }
+        };
+        // すべての配置可能な位置を表示
         availablePositions.forEach(([moveRow, moveCol]) => {
-            if (moveRow >= 0 && moveCol >= 0) {
-                const cell = rows[moveRow].getElementsByTagName('td')[moveCol];
-                if (this.board.board[moveRow][moveCol].isSente !== undefined) {
-                    if (this.board.board[moveRow][moveCol].isSente != this.board.isSenteTurn && !skip)
-                        cell.style.backgroundColor = "red";
+            var _a;
+            const isValidPosition = moveRow !== -1 && moveCol !== -1;
+            const targetCell = (_a = this.boardElement[moveRow]) === null || _a === void 0 ? void 0 : _a[moveCol];
+            if (isValidPosition && targetCell) {
+                // 配置可能な場所
+                const targetPiece = this.board.matrix[moveRow][moveCol];
+                // 配置先に空白が選択されていない
+                if (targetPiece.isSente !== undefined) {
+                    // 相手の駒だった場合配置可能
+                    if (targetPiece.isSente !== this.board.isSenteTurn && !skip) {
+                        targetCell.style.backgroundColor = "red";
+                        targetCell.addEventListener("click", pieceMoveHandler.bind(this, moveRow, moveCol), { once: true });
+                    }
+                    // それ以降は配置できないので番兵が来るまでスキップ
                     skip = true;
                 }
-                if (!skip)
-                    cell.style.backgroundColor = "red";
+                // 道中に駒がない
+                if (!skip) {
+                    // 配置可能
+                    targetCell.style.backgroundColor = "red";
+                    targetCell.addEventListener("click", pieceMoveHandler.bind(this, moveRow, moveCol), { once: true });
+                }
             }
             else {
                 skip = false;
             }
         });
-        // クリックしたセルを黄色で表示
-        rows[row].getElementsByTagName('td')[col].style.backgroundColor = "yellow";
     }
-    constructor(argTableElement) {
+    constructor(tableElement) {
+        var _a;
         this.board = new Shogi.Board();
-        // テーブルを登録
-        this.tableElement = argTableElement;
-        // デフォルトの状態へセット
+        this.selectedPosition = null;
+        // ボードを取得
+        const tbody = (_a = tableElement.getElementsByTagName('tbody')[0]) !== null && _a !== void 0 ? _a : tableElement;
+        this.boardElement = Array.from(tbody.getElementsByTagName('tr')).map((tr) => Array.from(tr.getElementsByTagName('td')));
+        // ボードの初期化
         this.board.defaultSet();
-        this.displayBoard();
         // グローバルにインスタンスを公開
         window.shogiUIInstance = this;
-        // テーブルの各セルにクリックイベントを追加
-        const cells = this.tableElement.querySelectorAll("td");
-        cells.forEach((cell, index) => {
-            // 行と列を計算する
-            const row = Math.floor(index / this.board.getBoard().length);
-            const col = index % this.board.getBoard()[0].length;
-            cell.addEventListener("click", () => {
-                this.testSet([row, col]);
+        // 各セルにクリックイベントを追加
+        this.boardElement.forEach((row, rowIndex) => {
+            row.forEach((cell, colIndex) => {
+                cell.addEventListener("click", () => {
+                    // 所有駒の時実行
+                    if (this.board.matrix[rowIndex][colIndex].isSente === this.board.isSenteTurn) {
+                        this.applyBoardToTable();
+                        // おける場所を表示
+                        this.viewCanSet([rowIndex, colIndex]);
+                    }
+                });
             });
         });
+        // 初期状態のボードを表示
+        this.applyBoardToTable();
     }
 }
 // DOMがロードし終わったときオブジェクトを生成
 window.addEventListener("DOMContentLoaded", () => {
-    // テーブル要素を取得
     const tableElement = document.getElementById('shogiBoard');
-    // テーブルエレメントを正常に取得できたかチェック
     if (tableElement) {
-        const ui = new ShogiUI(tableElement);
-        // 必要に応じて、ここで move などを呼び出せる
+        new ShogiUI(tableElement);
     }
     else {
         console.error("Shogi board table not found.");

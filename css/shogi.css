@@ -1,0 +1,10 @@
+.canSelect{
+    background-color:darkgreen;
+}
+
+.promoted{
+    color:red;
+}
+.unPromoted{
+    color:white;
+}

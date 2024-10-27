@@ -345,18 +345,20 @@ export class Knight extends Piece {
         if (this.isSente) {
             if ((Row = fromRow - forward) >= 0) {
                 if ((Col = fromCol - side) >= 0)
-                    result.push([Col, Row]);
+                    result.push([Row, Col]);
+                result.push(partition);
                 if ((Col = fromCol + side) < boardSize)
-                    result.push([Col, Row]);
+                    result.push([Row, Col]);
             }
         }
         // Gote's forward movement.
         else {
             if ((Row = fromRow + forward) < boardSize) {
                 if ((Col = fromCol - side) >= 0)
-                    result.push([Col, Row]);
+                    result.push([Row, Col]);
+                result.push(partition);
                 if ((Col = fromCol + side) < boardSize)
-                    result.push([Col, Row]);
+                    result.push([Row, Col]);
             }
         }
         return result;

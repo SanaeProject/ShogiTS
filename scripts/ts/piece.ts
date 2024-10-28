@@ -58,7 +58,7 @@ export abstract class Piece extends Object{
      * @readonly
      * @type {boolean|undefined}
      */
-    public readonly isSente:boolean | undefined = undefined;
+    public isSente:boolean | undefined = undefined;
 
     /**
      * @description Stores what can be promotion.This changes the behavior.
@@ -82,11 +82,11 @@ export abstract class Piece extends Object{
      * @function
      * @description Promote a piece.If the object's canPromotion is false, an Error is thrown.
     */
-    public setPromotion():void{
+    public changePromotion():void{
         if(!this.canPromotion)
             throw Error("Cant't Promote.");
 
-        this.didPromotion = true;
+        this.didPromotion = !this.didPromotion;
     }
     /**
      * @function

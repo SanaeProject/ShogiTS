@@ -98,6 +98,11 @@ export class Board {
         }
         // Capture the piece if there is one
         if (this.matrix[toRow][toCol].isSente !== undefined) {
+            // Change owner
+            this.matrix[toRow][toCol].isSente = this.isSenteTurn;
+            // unPromote
+            if (this.matrix[toRow][toCol].getDidPromotion())
+                this.matrix[toRow][toCol].changePromotion();
             if (this.isSenteTurn)
                 this.senteHave.push(this.matrix[toRow][toCol]);
             else
@@ -107,8 +112,8 @@ export class Board {
         this.matrix[toRow][toCol] = this.matrix[fromRow][fromCol];
         this.matrix[fromRow][fromCol] = new Pieces.Air();
         // set Promotion
-        if (((this.isSenteTurn && toRow < 3) || (!this.isSenteTurn && toRow > 5)) && this.matrix[toRow][toCol].canPromotion)
-            this.matrix[toRow][toCol].setPromotion();
+        if (((this.isSenteTurn && toRow < 3) || (!this.isSenteTurn && toRow > 5)) && this.matrix[toRow][toCol].canPromotion && !this.matrix[toRow][toCol].getDidPromotion())
+            this.matrix[toRow][toCol].changePromotion();
         return true;
     }
     /**

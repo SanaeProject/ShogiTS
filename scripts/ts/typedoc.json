@@ -1,5 +1,5 @@
 {
-    "entryPoints": ["./piece.ts"],
-    "out": "docs",
+    "entryPoints": ["./piece.ts","./board.ts","./shogiUI.ts"],
+    "out": "../../docs",
     "includeVersion": true
 }

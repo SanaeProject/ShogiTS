@@ -5,12 +5,11 @@ import * as Pieces from "./piece.js";
  * @classdesc The ShogiUI class manages the user interface for a Shogi game, providing board display, piece movement, and highlighting of selectable positions.
  *
  * @constructor
- * @param {HTMLTableElement} tableElement - The HTMLTableElement that represents the Shogi game board.
- * @example
- * const instance = new ShogiUI(tableElement);
+ * @param {HTMLElement} mainBoardTbody
+ * @param {HTMLElement} senteCapturedTbody
+ * @param {HTMLElement} goteCapturedTbody
  */
 export class ShogiUI {
-    // ボードの変化を適用する関数
     /**
      * @function applyBoardToTable
      * @description Apply the board to the table.
@@ -20,17 +19,30 @@ export class ShogiUI {
     applyBoardToTable() {
         for (let row = 0; row < Pieces.boardSize; row++) {
             for (let col = 0; col < Pieces.boardSize; col++) {
-                const piece = this.board.matrix[row][col];
-                const cell = this.boardElement[row][col];
-                cell.style.backgroundColor = piece.isSente === this.board.isSenteTurn ? "darkgreen" : "green";
-                cell.style.backgroundImage = piece.isSente !== undefined ? "url('../../pic/shogi.gif')" : "none";
-                cell.style.backgroundSize = "cover"; // 画像をセル全体に表示
-                cell.style.backgroundRepeat = "no-repeat"; // 画像のリピートを無効化
-                cell.textContent = piece.toString();
-                cell.style.transform = piece.isSente ? "rotate(0deg)" : "rotate(180deg)";
-                cell.style.color = piece.getDidPromotion() ? "red" : "black";
+                const piece = this.shogiBoard.matrix[row][col];
+                const cell = this.boardCells[row][col];
+                this.setCellStyle(cell, piece);
             }
         }
+    }
+    /**
+     * @function setCellStyle
+     * @description Set the background color of selectable pieces, the background and orientation of the pieces, and the color when promoted.
+     *
+     * @param {HTMLElement} cell - The cell to set.
+     * @param {Pieces.Piece} piece
+     * @returns {void}
+     */
+    setCellStyle(cell, piece) {
+        // backgrounds
+        cell.style.backgroundColor = piece.isSente === this.shogiBoard.isSenteTurn ? "darkgreen" : "green";
+        cell.style.backgroundImage = piece.isSente !== undefined ? "url('../../pic/shogi.gif')" : "none";
+        cell.style.backgroundSize = "cover"; // Fill the cell with an image
+        cell.style.backgroundRepeat = "no-repeat"; // Disable image repeat
+        // texts
+        cell.textContent = piece.toString();
+        cell.style.transform = piece.isSente ? "rotate(0deg)" : "rotate(180deg)";
+        cell.style.color = piece.getDidPromotion() ? "red" : "black";
     }
     /**
      * @function move
@@ -41,85 +53,192 @@ export class ShogiUI {
      * @returns {boolean} - Returns whether the move was successful.
     */
     move(from, to) {
-        return this.board.move(from, to);
+        if (this.shogiBoard.move(from, to)) {
+            this.shogiBoard.goNext();
+            this.applyCapturedBoardToTable();
+            return true;
+        }
+        return false;
     }
-    // 移動可能位置を表示する
+    /**
+     * @function viewCanSet
+     * @description Highlights where the piece at the selected position can move.
+     *
+     * @param {Pieces.Position} [row,col] - Source position.
+     * @returns {void}
+     */
     viewCanSet([row, col]) {
-        const piece = this.board.matrix[row][col];
-        const availablePositions = piece.generateMovePositions([row, col]);
-        this.selectedPosition = [row, col]; // 移動元位置を保持
-        let skip = false;
+        const piece = this.shogiBoard.matrix[row][col];
+        const availablePositions = piece.generateMovePositions([row, col]); // Get the positions that the piece can move to as an array.
+        this.selectedPosition = [row, col]; // Origin position.
+        let skip = false; // Skip until direction changes.
         const pieceMoveHandler = (targetRow, targetCol) => {
+            // Selected
             if (this.selectedPosition) {
                 const [fromRow, fromCol] = this.selectedPosition;
                 if (this.move([fromRow, fromCol], [targetRow, targetCol]))
-                    this.applyBoardToTable(); // 移動成功後にボードを更新
-                this.selectedPosition = null; // 選択位置をクリア
+                    this.applyBoardToTable();
+                this.selectedPosition = null; // Clear selected position.
             }
         };
-        // すべての配置可能な位置を表示
+        // Highlight all possible positions.
         availablePositions.forEach(([moveRow, moveCol]) => {
             var _a;
-            const isValidPosition = moveRow !== -1 && moveCol !== -1;
-            const targetCell = (_a = this.boardElement[moveRow]) === null || _a === void 0 ? void 0 : _a[moveCol];
-            if (isValidPosition && targetCell) {
-                // 配置可能な場所
-                const targetPiece = this.board.matrix[moveRow][moveCol];
-                // 配置先に空白が選択されていない
+            const isPartition = moveRow === Pieces.partition[0] && moveCol === Pieces.partition[0];
+            const targetCell = (_a = this.boardCells[moveRow]) === null || _a === void 0 ? void 0 : _a[moveCol];
+            const Highlight_AddMoveEvent = () => {
+                targetCell.style.backgroundColor = "red";
+                targetCell.addEventListener("click", pieceMoveHandler.bind(this, moveRow, moveCol), { once: true });
+            };
+            if (!isPartition && targetCell) {
+                // Possible locations.
+                const targetPiece = this.shogiBoard.matrix[moveRow][moveCol];
+                // No white space selected as destination.
                 if (targetPiece.isSente !== undefined) {
-                    // 相手の駒だった場合配置可能
-                    if (targetPiece.isSente !== this.board.isSenteTurn && !skip) {
-                        targetCell.style.backgroundColor = "red";
-                        targetCell.addEventListener("click", pieceMoveHandler.bind(this, moveRow, moveCol), { once: true });
-                    }
-                    // それ以降は配置できないので番兵が来るまでスキップ
+                    // If it is an opponent's piece, it can be placed.
+                    if (targetPiece.isSente !== this.shogiBoard.isSenteTurn && !skip)
+                        Highlight_AddMoveEvent();
+                    // Can't place anything after that, so skip until the guard arrives.
                     skip = true;
                 }
-                // 道中に駒がない
-                if (!skip) {
-                    // 配置可能
-                    targetCell.style.backgroundColor = "red";
-                    targetCell.addEventListener("click", pieceMoveHandler.bind(this, moveRow, moveCol), { once: true });
-                }
+                // No pieces on the road.
+                if (!skip)
+                    Highlight_AddMoveEvent();
             }
             else {
+                // Skip ends because the guards have arrived.
                 skip = false;
             }
         });
     }
-    constructor(tableElement) {
-        var _a;
-        this.board = new Shogi.Board();
+    /**
+     * @function applyCapturedBoardToTable
+     * @description Apply captured board to table
+     */
+    applyCapturedBoardToTable() {
+        const initBoard = (boardElement) => {
+            boardElement.forEach((rowElement) => {
+                rowElement.forEach((cell) => {
+                    // Make all cells blank
+                    cell.textContent = "";
+                    cell.style.backgroundColor = "green";
+                    cell.style.backgroundImage = "none";
+                });
+            });
+        };
+        const renderCapturedPieces = (capturedArray, capturedBoardElement) => {
+            initBoard(capturedBoardElement);
+            // Captured pieces
+            capturedArray.forEach((piece, index) => {
+                var _a, _b;
+                const [row, col] = [Math.floor(index / 10), index % 10];
+                const cell = (_b = (_a = capturedBoardElement[row]) === null || _a === void 0 ? void 0 : _a[col]) !== null && _b !== void 0 ? _b : null;
+                if (!cell)
+                    return;
+                this.setCellStyle(cell, piece);
+            });
+        };
+        // sente gote set.
+        renderCapturedPieces(this.shogiBoard.senteHave, this.senteCapturedPieces);
+        renderCapturedPieces(this.shogiBoard.goteHave, this.goteCapturedPieces);
+    }
+    /**
+     * @function moveCapturedPiece
+     * @description Move the captured piece
+     *
+     * @param {number} row
+     * @param {number} col
+     * @returns {boolean} - Returns whether it was successful.
+     */
+    moveCapturedPiece(row, col) {
+        // A reserved piece is selected and there is no piece in the placement location.
+        if (this.selectedCapturedPiece && this.shogiBoard.matrix[row][col] !== undefined) {
+            this.shogiBoard.matrix[row][col] = this.selectedCapturedPiece;
+            let capturedPieces = this.shogiBoard.isSenteTurn ? this.shogiBoard.senteHave : this.shogiBoard.goteHave;
+            // Remove used pieces from list.
+            const index = capturedPieces.indexOf(this.selectedCapturedPiece);
+            if (index != -1)
+                capturedPieces.splice(index, 1);
+            else
+                throw Error("not found");
+            this.selectedCapturedPiece = null; // Clear the selection
+            this.shogiBoard.goNext();
+            // Update
+            this.applyBoardToTable();
+            this.applyCapturedBoardToTable();
+            return true;
+        }
+        return false;
+    }
+    constructor(mainBoardTbody, senteCapturedTbody, goteCapturedTbody) {
+        /** This is an instance of the board class.It handle the game, such as moving the pieces. */
+        this.shogiBoard = new Shogi.Board();
+        /**
+         * When you select a piece, its position is stored.
+         * If you select another piece after it has been stored,
+         * the piece will move to that location.
+         */
         this.selectedPosition = null;
-        // ボードを取得
-        const tbody = (_a = tableElement.getElementsByTagName('tbody')[0]) !== null && _a !== void 0 ? _a : tableElement;
-        this.boardElement = Array.from(tbody.getElementsByTagName('tr')).map((tr) => Array.from(tr.getElementsByTagName('td')));
-        // ボードの初期化
-        this.board.defaultSet();
-        // グローバルにインスタンスを公開
+        /**
+         * When you select a piece you have, its position will be stored.
+         * If you select another piece after it has been stored, the piece will move to that position.
+         */
+        this.selectedCapturedPiece = null;
+        const addCapturedPieceClickEvent = (cell, capturedPieces, rowIndex, colIndex) => {
+            cell.addEventListener("click", () => {
+                const piece = capturedPieces[rowIndex * 10 + colIndex];
+                if (piece && piece.isSente === this.shogiBoard.isSenteTurn) {
+                    this.selectedCapturedPiece = piece;
+                    cell.style.backgroundColor = "yellow";
+                }
+            });
+        };
+        // Get html element
+        this.boardCells = Array.from(mainBoardTbody.getElementsByTagName('tr')).map((tr) => Array.from(tr.getElementsByTagName('td')));
+        this.senteCapturedPieces = Array.from(senteCapturedTbody.getElementsByTagName('tr')).map((tr) => Array.from(tr.getElementsByTagName('td')));
+        this.goteCapturedPieces = Array.from(goteCapturedTbody.getElementsByTagName('tr')).map((tr) => Array.from(tr.getElementsByTagName('td')));
+        // Init board
+        this.shogiBoard.defaultSet();
+        // Publish the instance
         window.shogiUIInstance = this;
-        // 各セルにクリックイベントを追加
-        this.boardElement.forEach((row, rowIndex) => {
+        // Added click event for pieces in hand
+        this.senteCapturedPieces.forEach((row, rowIndex) => {
+            row.forEach((cell, colIndex) => {
+                addCapturedPieceClickEvent(cell, this.shogiBoard.senteHave, rowIndex, colIndex);
+            });
+        });
+        this.goteCapturedPieces.forEach((row, rowIndex) => {
+            row.forEach((cell, colIndex) => {
+                addCapturedPieceClickEvent(cell, this.shogiBoard.goteHave, rowIndex, colIndex);
+            });
+        });
+        // Added board click event.
+        this.boardCells.forEach((row, rowIndex) => {
             row.forEach((cell, colIndex) => {
                 cell.addEventListener("click", () => {
-                    // 所有駒の時実行
-                    if (this.board.matrix[rowIndex][colIndex].isSente === this.board.isSenteTurn) {
+                    if (this.selectedCapturedPiece) {
+                        // Place the captured piece
+                        this.moveCapturedPiece(rowIndex, colIndex);
+                    }
+                    else if (this.shogiBoard.matrix[rowIndex][colIndex].isSente === this.shogiBoard.isSenteTurn) {
+                        // Move piece
                         this.applyBoardToTable();
-                        // おける場所を表示
                         this.viewCanSet([rowIndex, colIndex]);
                     }
                 });
             });
         });
-        // 初期状態のボードを表示
+        // Display of the initial board and pieces.
         this.applyBoardToTable();
+        this.applyCapturedBoardToTable();
     }
 }
-// DOMがロードし終わったときオブジェクトを生成
 window.addEventListener("DOMContentLoaded", () => {
-    const tableElement = document.getElementById('shogiBoard');
-    if (tableElement) {
-        new ShogiUI(tableElement);
+    const shogiBoardTbodyElement = document.getElementById('shogiBoard');
+    const senteTbodyElement = document.getElementById('senteBoard');
+    const goteTbodyElement = document.getElementById('goteBoard');
+    if (shogiBoardTbodyElement) {
+        new ShogiUI(shogiBoardTbodyElement, senteTbodyElement, goteTbodyElement);
     }
     else {
         console.error("Shogi board table not found.");

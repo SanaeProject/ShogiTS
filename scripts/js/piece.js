@@ -65,10 +65,10 @@ export class Piece extends Object {
      * @function
      * @description Promote a piece.If the object's canPromotion is false, an Error is thrown.
     */
-    setPromotion() {
+    changePromotion() {
         if (!this.canPromotion)
             throw Error("Cant't Promote.");
-        this.didPromotion = true;
+        this.didPromotion = !this.didPromotion;
     }
     /**
      * @function
@@ -346,6 +346,7 @@ export class Knight extends Piece {
             if ((Row = fromRow - forward) >= 0) {
                 if ((Col = fromCol - side) >= 0)
                     result.push([Row, Col]);
+                // To keep loading.
                 result.push(partition);
                 if ((Col = fromCol + side) < boardSize)
                     result.push([Row, Col]);
@@ -356,6 +357,7 @@ export class Knight extends Piece {
             if ((Row = fromRow + forward) < boardSize) {
                 if ((Col = fromCol - side) >= 0)
                     result.push([Row, Col]);
+                // To keep loading.
                 result.push(partition);
                 if ((Col = fromCol + side) < boardSize)
                     result.push([Row, Col]);

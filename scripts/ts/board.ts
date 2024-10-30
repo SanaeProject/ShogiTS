@@ -5,25 +5,46 @@
 import * as Pieces from "./piece.js";
 
 /**
- * Represents the Shogi board, including pieces, turns, and movement logic.
- */
+ * @class Board
+ * @classdesc Represents the Shogi board, including pieces, turns, and movement logic.
+ */ 
 export class Board {
-    /** 2D array representing the board, initialized with Air pieces. */
+    /**
+     * @description 2D array representing the board, initialized with Air pieces.
+     * @type {Pieces.Piece}
+     */
     matrix: Pieces.Piece[][] = Array.from({ length: Pieces.boardSize }, () => Array(Pieces.boardSize).fill(new Pieces.Air()));
 
-    /** Array of pieces held by the Sente player. */
-    senteHave: Pieces.Piece[] = [];
-
-    /** Array of pieces held by the Gote player. */
-    goteHave: Pieces.Piece[] = [];
-
-    /** Indicates whose turn it is (true for Sente, false for Gote). */
-    isSenteTurn: boolean = true;
-
-    constructor() {}
+    /**
+     * @description Array of pieces captured by the Sente player.
+     * @type {Pieces.Piece}
+     */
+    senteCapturedPieces: Pieces.Piece[] = [];
 
     /**
-     * Sets the default initial positions of all pieces on the board.
+     * @description Array of pieces captured by the Gote player.
+     * @type {Pieces.Piece}
+     */
+    goteCapturedPieces: Pieces.Piece[] = [];
+
+    /**
+     * @description Indicates whose turn it is (true for Sente, false for Gote).
+     * @type {boolean}
+     */
+    isSenteTurn: boolean = true;
+
+    /**
+     * @description A function that queries whether
+     * @type {boolean} is allowed.
+     */
+    isPromotionAllowed:()=>boolean = ()=>{return confirm("成りますか?");};
+
+    /**
+     * @function defaultSet
+     * @description Sets the default initial positions of all pieces on the board.
+     *
+     * @param {void}
+     * @returns {void}
      */
     defaultSet(): void {
         // Place Gote pieces
@@ -62,9 +83,11 @@ export class Board {
     }
 
     /**
-     * Moves a piece from one position to another.
-     * @param from - The starting position of the piece.
-     * @param to - The target position to move the piece.
+     * @function move
+     * @description Moves a piece from one position to another.
+     * 
+     * @param {Pieces.Piece} from - The starting position of the piece.
+     * @param {Pieces.Piece} to - The target position to move the piece.
      * @returns True if the move is successful, false otherwise.
      */
     public move([fromRow, fromCol]: Pieces.Position, [toRow, toCol]: Pieces.Position): boolean {
@@ -121,28 +144,36 @@ export class Board {
             this.matrix[toRow][toCol].isSente = this.isSenteTurn;
             
             // unPromote
-            if(this.matrix[toRow][toCol].getDidPromotion())
-                this.matrix[toRow][toCol].changePromotion();
+            if(this.matrix[toRow][toCol].getIsPromoted())
+                this.matrix[toRow][toCol].changePromotionStatus();
 
             if (this.isSenteTurn) 
-                this.senteHave.push(this.matrix[toRow][toCol]);
+                this.senteCapturedPieces.push(this.matrix[toRow][toCol]);
             else
-                this.goteHave.push(this.matrix[toRow][toCol]);
+                this.goteCapturedPieces.push(this.matrix[toRow][toCol]);
         }
 
         // Move the piece
         this.matrix[toRow][toCol] = this.matrix[fromRow][fromCol];
         this.matrix[fromRow][fromCol] = new Pieces.Air();
 
-        // set Promotion
-        if(((this.isSenteTurn && toRow < 3) || (!this.isSenteTurn && toRow > 5)) && this.matrix[toRow][toCol].canPromotion && !this.matrix[toRow][toCol].getDidPromotion())
-            this.matrix[toRow][toCol].changePromotion();
+        let notOutOfRange = (this.isSenteTurn && toRow < 3) || (!this.isSenteTurn && toRow > 5);
+        let piece:Pieces.Piece = this.matrix[toRow][toCol];
+
+        // can set Promotion
+        if(notOutOfRange && piece.canPromotion && !piece.getIsPromoted() && !piece.getRefusedPromotion()){
+            if(this.isPromotionAllowed())
+                piece.changePromotionStatus();
+            else
+                piece.setRefusePromotion();
+        }
 
         return true;
     }
 
     /**
-     * Change turn.
+     * @function goNext
+     * @description Change turn.
      * @returns The current turn.
      */
     public goNext():boolean{
@@ -150,8 +181,9 @@ export class Board {
     }
 
     /**
-     * Gets the current state of the board.
-     * @returns The current board as a 2D array.
+     * @function getBoard
+     * @description Gets the current state of the board.
+     * @returns {ReadonlyArray<ReadonlyArray<Pieces.Piece>>} - The current board as a 2D array.
      */
     public getBoard():ReadonlyArray<ReadonlyArray<Pieces.Piece>>  {
         return (this.matrix);

@@ -1,7 +1,4 @@
 /**
- * このファイルは将棋の駒の基底クラスを定義し、継承した駒クラスを作成している。
- * 設計やコーディングはSanaePRJが行ったがJSDocは ChatGPTによって行われている。
- *
  * @author SanaePRJ
  */
 /**
@@ -58,27 +55,49 @@ export class Piece extends Object {
          * @type {boolean}
          */
         this.canPromotion = false;
-        this.didPromotion = false;
+        this.isPromoted = false;
+        this.refusedPromotion = false;
         this.isSente = argIsSente;
     }
     /**
-     * @function
+     * @function changePromotionStatus
+     *
      * @description Promote a piece.If the object's canPromotion is false, an Error is thrown.
     */
-    changePromotion() {
+    changePromotionStatus() {
         if (!this.canPromotion)
             throw Error("Cant't Promote.");
-        this.didPromotion = !this.didPromotion;
+        this.isPromoted = !this.isPromoted;
     }
     /**
-     * @function
+     * @function getDidPromotion
+     *
      * @description Gets whether a piece has been promoted.
     */
-    getDidPromotion() {
-        return this.didPromotion;
+    getIsPromoted() {
+        return this.isPromoted;
     }
     /**
-     * @function
+     * @function getDidRejectPromotion
+     * @description Gets whether the piece refused to be promoted.
+     */
+    getRefusedPromotion() {
+        return this.refusedPromotion;
+    }
+    /**
+     * @function setRefusePromotion
+     * @description Sets the refusal status for promotion of the piece. Throws an error if the piece is already promoted.
+     *
+     * @throws {Error} If an attempt is made to refuse promotion when the piece is already promoted.
+     * @returns {boolean} The updated `refusedPromotion` status, set to `true`.
+     */
+    setRefusePromotion() {
+        if (this.isPromoted)
+            throw Error("A denied operation is being performed.");
+        return this.refusedPromotion = true;
+    }
+    /**
+     * @function getLinearMovePositions
      * @description Gets a position that can be moved a specified number of times in a particular direction from a specified position.
      *
      * @param {Position} fromRowCol - Current loacation [row, col]
@@ -203,7 +222,7 @@ export class Rook extends Piece {
     }
     /** Returns the display character for the Rook or its promoted form. */
     toString() {
-        return this.didPromotion ? "竜" : "飛";
+        return this.isPromoted ? "竜" : "飛";
     }
     /**
      * Generates valid move positions for the Rook, with additional moves if promoted.
@@ -213,7 +232,7 @@ export class Rook extends Piece {
     generateMovePositions(pos) {
         let result = [];
         // Adds diagonal moves if promoted.
-        if (this.didPromotion) {
+        if (this.isPromoted) {
             result.push(...Rook.getLinearMovePositions(pos, 1, [
                 [Direction.Up, Direction.Left],
                 [Direction.Up, Direction.Right],
@@ -237,7 +256,7 @@ export class Bishop extends Piece {
     }
     /** Returns the display character for the Bishop or its promoted form. */
     toString() {
-        return this.didPromotion ? "龍" : "角";
+        return this.isPromoted ? "龍" : "角";
     }
     /**
      * Generates valid move positions for the Bishop, with additional moves if promoted.
@@ -247,7 +266,7 @@ export class Bishop extends Piece {
     generateMovePositions(pos) {
         let result = [];
         // Adds orthogonal moves if promoted.
-        if (this.didPromotion) {
+        if (this.isPromoted) {
             result.push(...Bishop.getLinearMovePositions(pos, 1, [[Direction.Up], [Direction.Down], [Direction.Left], [Direction.Right]], this.isSente));
         }
         // Adds all diagonal moves.
@@ -271,7 +290,7 @@ export class Pawn extends Piece {
     }
     /** Returns the display character for the Pawn or its promoted form. */
     toString() {
-        return this.didPromotion ? "と" : "歩";
+        return this.isPromoted ? "と" : "歩";
     }
     /**
      * Generates valid move positions for the Pawn.
@@ -280,7 +299,7 @@ export class Pawn extends Piece {
      */
     generateMovePositions(pos) {
         // Moves like Gold if promoted.
-        if (this.didPromotion) {
+        if (this.isPromoted) {
             return GoldGen.goldGenMovePositions(pos, this.isSente);
         }
         // Moves 1 step forward if not promoted.
@@ -307,7 +326,7 @@ export class Lance extends Piece {
      */
     generateMovePositions(pos) {
         // Moves like Gold if promoted.
-        if (this.didPromotion) {
+        if (this.isPromoted) {
             return GoldGen.goldGenMovePositions(pos, this.isSente);
         }
         // Moves any number of squares forward if not promoted.
@@ -334,7 +353,7 @@ export class Knight extends Piece {
      */
     generateMovePositions([fromRow, fromCol]) {
         // Moves like Gold if promoted.
-        if (this.didPromotion)
+        if (this.isPromoted)
             return GoldGen.goldGenMovePositions([fromRow, fromCol], this.isSente);
         const forward = 2; // Moves two squares forward
         const side = 1; // Moves one square sideways
@@ -420,7 +439,7 @@ export class SilverGen extends Piece {
      */
     generateMovePositions(pos) {
         // Moves like Gold if promoted.
-        if (this.didPromotion)
+        if (this.isPromoted)
             return GoldGen.goldGenMovePositions(pos, this.isSente);
         return SilverGen.getLinearMovePositions(pos, 1, [
             [Direction.Up],

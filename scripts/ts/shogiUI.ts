@@ -21,6 +21,8 @@ export class ShogiUI {
     private senteCapturedPieces:HTMLElement[][];
     private goteCapturedPieces:HTMLElement[][];
 
+    private isDebugMode = false;
+
     /**
      * When you select a piece, its position is stored.
      * If you select another piece after it has been stored, 
@@ -61,14 +63,14 @@ export class ShogiUI {
     private setCellStyle(cell:HTMLElement,piece:Pieces.Piece):void{
         // backgrounds
         cell.style.backgroundColor = piece.isSente === this.shogiBoard.isSenteTurn ? "darkgreen" : "green";        
-        cell.style.backgroundImage = piece.isSente !== undefined ? "url('../../pic/shogi.gif')" : "none";
+        cell.style.backgroundImage = piece.isSente !== undefined ? "url('./pic/shogi.gif')" : "none";
         cell.style.backgroundSize   = "cover";      // Fill the cell with an image
         cell.style.backgroundRepeat = "no-repeat";  // Disable image repeat
         
         // texts
         cell.textContent = piece.toString();
         cell.style.transform = piece.isSente ? "rotate(0deg)" : "rotate(180deg)";
-        cell.style.color = piece.getDidPromotion() ? "red" : "black";
+        cell.style.color = piece.getIsPromoted() ? "red" : "black";
     }
 
     /**
@@ -81,7 +83,9 @@ export class ShogiUI {
     */
     public move(from: Pieces.Position, to: Pieces.Position): boolean {
         if(this.shogiBoard.move(from, to)){
-            this.shogiBoard.goNext();
+            if(!this.isDebugMode)
+                this.shogiBoard.goNext();
+            
             this.applyCapturedBoardToTable();
 
             return true;
@@ -183,8 +187,8 @@ export class ShogiUI {
         };
         
         // sente gote set.
-        renderCapturedPieces(this.shogiBoard.senteHave,this.senteCapturedPieces);
-        renderCapturedPieces(this.shogiBoard.goteHave,this.goteCapturedPieces);
+        renderCapturedPieces(this.shogiBoard.senteCapturedPieces,this.senteCapturedPieces);
+        renderCapturedPieces(this.shogiBoard.goteCapturedPieces,this.goteCapturedPieces);
     }
 
     /**
@@ -200,7 +204,7 @@ export class ShogiUI {
         if (this.selectedCapturedPiece && this.shogiBoard.matrix[row][col]!==undefined) {
             this.shogiBoard.matrix[row][col]  = this.selectedCapturedPiece;
             
-            let capturedPieces:Pieces.Piece[] = this.shogiBoard.isSenteTurn ? this.shogiBoard.senteHave:this.shogiBoard.goteHave;
+            let capturedPieces:Pieces.Piece[] = this.shogiBoard.isSenteTurn ? this.shogiBoard.senteCapturedPieces:this.shogiBoard.goteCapturedPieces;
             
             // Remove used pieces from list.
             const index = capturedPieces.indexOf(this.selectedCapturedPiece);
@@ -210,7 +214,9 @@ export class ShogiUI {
                 throw Error("not found");
             
             this.selectedCapturedPiece = null; // Clear the selection
-            this.shogiBoard.goNext();
+            
+            if(!this.isDebugMode)
+                this.shogiBoard.goNext();
 
             // Update
             this.applyBoardToTable();
@@ -251,12 +257,12 @@ export class ShogiUI {
         // Added click event for pieces in hand
         this.senteCapturedPieces.forEach((row, rowIndex) => {
             row.forEach((cell, colIndex) => {
-                addCapturedPieceClickEvent(cell,this.shogiBoard.senteHave,rowIndex,colIndex);
+                addCapturedPieceClickEvent(cell,this.shogiBoard.senteCapturedPieces,rowIndex,colIndex);
             });
         });
         this.goteCapturedPieces.forEach((row, rowIndex) => {
             row.forEach((cell, colIndex) => {
-                addCapturedPieceClickEvent(cell,this.shogiBoard.goteHave,rowIndex,colIndex);
+                addCapturedPieceClickEvent(cell,this.shogiBoard.goteCapturedPieces,rowIndex,colIndex);
             });
         });
 

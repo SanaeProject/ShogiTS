@@ -62,6 +62,41 @@ export class ShogiUI {
         return false;
     }
     /**
+     * @function pieceMoveHandler
+     * @description Handles piece movement on the Shogi board. If a piece is selected, attempts to move it to the specified target position.
+     *              If the move captures the opponent's king, prompts to reset the board.
+     *
+     * @param {number} targetRow - The row index of the target position.
+     * @param {number} targetCol - The column index of the target position.
+     *
+     * @returns {void}
+     *
+     * @throws {Error} If there is an issue with board initialization or piece movement.
+     */
+    pieceMoveHandler(targetRow, targetCol) {
+        // Selected
+        if (this.selectedPosition) {
+            const [fromRow, fromCol] = this.selectedPosition;
+            const capturingPiece = this.shogiBoard.matrix[targetRow][targetCol];
+            // Success to move
+            if (this.move([fromRow, fromCol], [targetRow, targetCol])) {
+                // Update the board
+                this.applyBoardToTable();
+                // Finish
+                if (capturingPiece.toString() === "王") {
+                    // Prevent confirmation from coming before the board is updated.
+                    setTimeout(() => {
+                        const doInit = confirm(`${this.shogiBoard.isSenteTurn ? "先手" : "後手"}が勝利しました。盤面を初期化しますか?`);
+                        if (doInit)
+                            location.reload();
+                    }, 0);
+                }
+            }
+            this.selectedPosition = null; // Clear selected position.
+        }
+    }
+    ;
+    /**
      * @function viewCanSet
      * @description Highlights where the piece at the selected position can move.
      *
@@ -73,15 +108,6 @@ export class ShogiUI {
         const availablePositions = piece.generateMovePositions([row, col]); // Get the positions that the piece can move to as an array.
         this.selectedPosition = [row, col]; // Origin position.
         let skip = false; // Skip until direction changes.
-        const pieceMoveHandler = (targetRow, targetCol) => {
-            // Selected
-            if (this.selectedPosition) {
-                const [fromRow, fromCol] = this.selectedPosition;
-                if (this.move([fromRow, fromCol], [targetRow, targetCol]))
-                    this.applyBoardToTable();
-                this.selectedPosition = null; // Clear selected position.
-            }
-        };
         // Highlight all possible positions.
         availablePositions.forEach(([moveRow, moveCol]) => {
             var _a;
@@ -89,7 +115,7 @@ export class ShogiUI {
             const targetCell = (_a = this.boardCells[moveRow]) === null || _a === void 0 ? void 0 : _a[moveCol];
             const Highlight_AddMoveEvent = () => {
                 targetCell.style.backgroundColor = "red";
-                targetCell.addEventListener("click", pieceMoveHandler.bind(this, moveRow, moveCol), { once: true });
+                targetCell.addEventListener("click", this.pieceMoveHandler.bind(this, moveRow, moveCol), { once: true });
             };
             if (!isPartition && targetCell) {
                 // Possible locations.
@@ -152,25 +178,17 @@ export class ShogiUI {
      * @returns {boolean} - Returns whether it was successful.
      */
     moveCapturedPiece(row, col) {
-        // A reserved piece is selected and there is no piece in the placement location.
-        if (this.selectedCapturedPiece && this.shogiBoard.matrix[row][col] !== undefined) {
-            this.shogiBoard.matrix[row][col] = this.selectedCapturedPiece;
-            let capturedPieces = this.shogiBoard.isSenteTurn ? this.shogiBoard.senteCapturedPieces : this.shogiBoard.goteCapturedPieces;
-            // Remove used pieces from list.
-            const index = capturedPieces.indexOf(this.selectedCapturedPiece);
-            if (index != -1)
-                capturedPieces.splice(index, 1);
-            else
-                throw Error("not found");
-            this.selectedCapturedPiece = null; // Clear the selection
-            if (!this.isDebugMode)
-                this.shogiBoard.goNext();
-            // Update
-            this.applyBoardToTable();
-            this.applyCapturedBoardToTable();
-            return true;
-        }
-        return false;
+        if (!this.selectedCapturedPiece)
+            return false;
+        let capturedPieces = this.shogiBoard.isSenteTurn ? this.shogiBoard.senteCapturedPieces : this.shogiBoard.goteCapturedPieces;
+        let selectedIndex = capturedPieces.indexOf(this.selectedCapturedPiece);
+        let result = this.shogiBoard.moveCapturedPiece(selectedIndex, [row, col]);
+        if (selectedIndex == -1)
+            return false;
+        this.selectedCapturedPiece = null;
+        this.applyBoardToTable();
+        this.applyCapturedBoardToTable();
+        return result;
     }
     constructor(mainBoardTbody, senteCapturedTbody, goteCapturedTbody) {
         /** This is an instance of the board class.It handle the game, such as moving the pieces. */

@@ -172,6 +172,45 @@ export class Board {
     }
 
     /**
+     * @function moveCapturedPiece
+     * @description Moves a captured piece from the player's captured pieces array to a specified position on the board.
+     * Validates that the move is legal, ensuring the destination is unoccupied and follows pawn placement rules.
+     *
+     * @param {number} capturedIndex - The index of the captured piece in the captured pieces array.
+     * @param {Pieces.Position} position - The position ([row, col]) where the piece is to be placed on the board.
+     * @returns {boolean} - Returns `true` if the piece was successfully placed on the board; otherwise, returns `false`.
+     *
+     * @throws {Error} - Throws an error if any operation violates game rules.
+     */
+    public moveCapturedPiece(capturedIndex:number,[row,col]:Pieces.Position):boolean{
+        let capturedPieces:Pieces.Piece[] = this.isSenteTurn ? this.senteCapturedPieces:this.goteCapturedPieces;
+        
+        // Out of range.
+        if(capturedPieces.length<=capturedIndex)
+            return false;
+
+        // Placement destination is blank
+        if(this.matrix[row][col].isSente!==undefined)
+            return false;
+        
+        // There may not be a pawn in the pawn's destination row.
+        if (capturedPieces[capturedIndex].toString() === "歩") {
+            let pawnExistsInColumn = this.matrix.some(row => 
+                row[col].isSente === this.isSenteTurn && (row[col].toString() === "歩" || row[col].toString() === "と")
+            );
+        
+            if (pawnExistsInColumn)
+                return false;
+        }
+
+        // Success
+        this.matrix[row][col] = capturedPieces[capturedIndex];
+        capturedPieces.splice(capturedIndex,1);
+
+        return true;
+    }
+
+    /**
      * @function goNext
      * @description Change turn.
      * @returns The current turn.

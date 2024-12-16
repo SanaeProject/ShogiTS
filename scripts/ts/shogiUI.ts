@@ -111,7 +111,7 @@ export class ShogiUI {
         if (this.selectedPosition) {
             const [fromRow, fromCol] = this.selectedPosition;
             const capturingPiece:Pieces.Piece = this.shogiBoard.matrix[targetRow][targetCol];
-            
+
             // Success to move
             if (this.move([fromRow, fromCol], [targetRow, targetCol])){
                 // Update the board
@@ -131,6 +131,7 @@ export class ShogiUI {
             this.selectedPosition = null; // Clear selected position.
         }
     };
+
 
     /**
      * @function viewCanSet
@@ -314,3 +315,13 @@ window.addEventListener("DOMContentLoaded", () => {
         console.error("Shogi board table not found.");
     }
 });
+
+window.Air = Pieces.Air;
+window.King = Pieces.King; 
+window.Rook = Pieces.Rook; 
+window.Bishop = Pieces.Bishop; 
+window.Pawn = Pieces.Pawn; 
+window.Lance = Pieces.Lance; 
+window.Knight = Pieces.Knight; 
+window.GoldGen = Pieces.GoldGen; 
+window.SilverGen = Pieces.SilverGen;

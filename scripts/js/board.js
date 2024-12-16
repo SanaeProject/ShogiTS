@@ -42,6 +42,7 @@ export class Board {
      * @returns {void}
      */
     defaultSet() {
+        this.crearSet();
         // Place Gote pieces
         this.matrix[0][0] = new Pieces.Lance(false);
         this.matrix[0][1] = new Pieces.Knight(false);
@@ -72,6 +73,11 @@ export class Board {
         // Place Sente pawns
         for (let i = 0; i < Pieces.boardSize; i++)
             this.matrix[6][i] = new Pieces.Pawn(true);
+    }
+    crearSet() {
+        this.matrix.forEach(row => {
+            row.fill(new Pieces.Air());
+        });
     }
     /**
      * @function move
@@ -183,14 +189,6 @@ export class Board {
      */
     goNext() {
         return this.isSenteTurn = !this.isSenteTurn; // Change turn  
-    }
-    /**
-     * @function getBoard
-     * @description Gets the current state of the board.
-     * @returns {ReadonlyArray<ReadonlyArray<Pieces.Piece>>} - The current board as a 2D array.
-     */
-    getBoard() {
-        return (this.matrix);
     }
 }
 //# sourceMappingURL=board.js.map

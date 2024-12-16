@@ -47,6 +47,8 @@ export class Board {
      * @returns {void}
      */
     defaultSet(): void {
+        this.crearSet();
+
         // Place Gote pieces
         this.matrix[0][0] = new Pieces.Lance(false);
         this.matrix[0][1] = new Pieces.Knight(false);
@@ -81,6 +83,11 @@ export class Board {
         for (let i = 0; i < Pieces.boardSize; i++)
             this.matrix[6][i] = new Pieces.Pawn(true);
     }
+    crearSet(){
+        this.matrix.forEach(row=>{
+            row.fill(new Pieces.Air());
+        });
+    }
 
     /**
      * @function move
@@ -90,7 +97,7 @@ export class Board {
      * @param {Pieces.Piece} to - The target position to move the piece.
      * @returns True if the move is successful, false otherwise.
      */
-    public move([fromRow, fromCol]: Pieces.Position, [toRow, toCol]: Pieces.Position): boolean {
+    move([fromRow, fromCol]: Pieces.Position, [toRow, toCol]: Pieces.Position): boolean {
         // Check if the piece belongs to the current player
         if (this.matrix[fromRow][fromCol].isSente !== this.isSenteTurn) {
             console.log("I tried to move a piece that wasn't my own");
@@ -217,14 +224,5 @@ export class Board {
      */
     public goNext():boolean{
         return this.isSenteTurn = !this.isSenteTurn;// Change turn  
-    }
-
-    /**
-     * @function getBoard
-     * @description Gets the current state of the board.
-     * @returns {ReadonlyArray<ReadonlyArray<Pieces.Piece>>} - The current board as a 2D array.
-     */
-    public getBoard():ReadonlyArray<ReadonlyArray<Pieces.Piece>>  {
-        return (this.matrix);
     }
 }

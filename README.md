@@ -3,7 +3,7 @@ shogiTSはWEB上で将棋を遊べるように開発しているプロジェク�
 開発言語は保守性や安全性を考え`TypeScript`を使用しています。  
 ## リンク
  - 実際の動かしているサイト  
-[将棋サイト](http://sanae.starfree.jp/pre/shogi)
+[将棋サイト](https://sanae.tokyo/tools/shogi/)
 
 ## プログラム
 
